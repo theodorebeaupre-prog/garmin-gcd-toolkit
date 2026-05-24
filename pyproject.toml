@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "garmin-gcd-toolkit"
+version = "0.1.0"
+description = "Parse and extract resources from Garmin .GCD firmware container files"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "construct>=2.10",
+    "click>=8.1",
+    "rich>=13.0",
+    "python-magic>=0.4",
+]
+
+[project.scripts]
+gcd-tool = "gcd_tool.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gcd_tool"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

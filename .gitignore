@@ -1,0 +1,35 @@
+# Garmin firmware — NEVER commit
+*.GCD
+*.gcd
+*.img
+*.bin
+GarminDevice.xml
+
+# GPS tracks (PII)
+*.gpx
+
+# Unlock / license files
+*.gma
+*.unl
+
+# Extracted resources (derived from proprietary firmware)
+output/
+extracted/
+
+# Samples directory (firmware files live here)
+samples/
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+*.egg-info/
+
+# macOS
+.DS_Store
