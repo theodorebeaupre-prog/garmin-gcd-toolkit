@@ -77,17 +77,31 @@ Payload size: 0 bytes
 Confirmed: types 0x4C and 0x67 → FieldB is LE uint16 payload length
 Unknown:   types 0xDC and 0x64 → FieldB does NOT encode payload length
 
-## Notes
+## Resource extraction results
 
+- 20 PNG files were extracted from embedded payload regions and opened
+  successfully. These appear to be bootloader UI assets.
+- 6 `1f 8b` hits were found inside large payloads. Direct `gzip` decompression
+  currently fails with "Unknown compression method", so their true content
+  remains TBD.
+- `BM` hits were false positives caused by ARM Thumb opcodes and nearby data.
+  No valid standalone BMP files were confirmed.
+
+## Additional record observations
+
+- Type `0x43` begins with UTF-16 LE text and appears to store localization
+  data.
+- Type `0x30` begins with UTF-16 LE menu/path-style strings such as `1:/`.
 - Internal strings (GARMIN, RGN, LBL, NET, NOD, MDR, SRT) are payload
   contents, not top-level container markers.
 - 0xFF padding near EOF is consistent with flash memory storage.
 - The file likely contains an embedded FAT filesystem image
   (strings "OS5.0", "FAT32", "FAT16" found at 0x3C6E9).
 
-## Open questions for Phase 3
+## Open questions for Phase 4
 
 - What encodes payload length for types 0xDC and 0x64?
 - Are other record types length-delimited or scan-delimited?
-- Is there a checksum or integrity field per record?
+- Are the 6 `1f 8b` hits real compressed streams with a Garmin-specific wrapper
+  or false positives similar to the BMP hits?
 - What is the full type registry for GUPDATE.GCD (80+ types found)?
