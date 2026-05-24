@@ -6,7 +6,14 @@ for interoperability purposes.
 
 ## Status
 
-Work in progress. Currently in Phase 1 (project bootstrap).
+Phase 2 complete: record structure confirmed and walker implemented.
+
+## Features
+
+- GCD magic validation
+- Record walking via `gcd-tool list`
+- 19 records mapped in `GUPDATE.GCD`
+- 8 tests passing
 
 ## Usage
 
