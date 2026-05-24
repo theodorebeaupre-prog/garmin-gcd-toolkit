@@ -1,61 +1,93 @@
 # Garmin .GCD Format — Reverse Engineering Notes
 
-> **Status:** Phase 1 skeleton — observations are empirical hypotheses, not confirmed spec.
-> Device: nüvi 2455 (PN 006-B1371-00), Firmware 8.30, File: GUPDATE.GCD (50,201,232 bytes)
+> **Status:** Phase 2 observations — confirmed from empirical byte analysis on:
+> - `samples/GUPDATE.GCD` (50,201,232 bytes)
+> - `samples/remotesw_090100.GCD` (36,972 bytes)
+>
+> Device context: nüvi 2455 (PN 006-B1371-00), Firmware 8.30
 
-## Overall structure (hypothesis)
+## Overall structure
 
-| Region         | Offset range        | Size   | Notes                          |
-|----------------|---------------------|--------|--------------------------------|
-| File header    | 0x00000 – 0x00FFF   | 4 KB   | Zero-padded to page boundary  |
-| Data records   | 0x01000 – EOF       | ~48 MB | TBD in Phase 2–3               |
+| Region       | Offset range      | Size   | Status    |
+|--------------|-------------------|--------|-----------|
+| File header  | 0x0000-0x0FFF     | 4 KB   | Confirmed |
+| Records      | 0x1000-EOF        | varies | Confirmed |
 
-## Header (0x00 – 0x0FFF)
+The file header is zero-padded to a 4 KB boundary.
+Record parsing begins at 0x1000.
 
-Observed bytes — first 128 (the rest is null padding):
+## File header (0x0000-0x0FFF)
 
-```
-0x00  47 41 52 4d 49 4e 64 00   Magic: "GARMINd\0"
-0x08  01 00 01 00               [?] Two LE uint16, both = 1
-0x0C  dc 02 00 15               [?] Unknown — 4 bytes
-0x10  [22 × 0x00]               Reserved
-0x26  03 00                     [?] LE uint16 = 3
-0x28  09 00                     [?] LE uint16 = 9
-0x2A  10 d4 5c 13               [?] 4 bytes — timestamp? checksum?
-0x2E  04 45 0d 14 41 05 00      [?] 7 bytes — unknown
-0x35  37 00                     [HYP] LE uint16 = 0x37 — offset to copyright string?
-0x37  43 6f 70 79 ...           ASCII: "Copyright 1996-2013 by Garmin Ltd.
-                                 or its subsidiaries." (55 bytes, null-term at 0x6E)
-0x64  01 00 01 00               [?] Repeats 0x08 pattern — another record start?
-0x68  4b 02                     [?] LE uint16 = 587
-0x6A  00 89 0f 00               [?] 4 bytes — unknown
-0x6E  [0x0F92 × 0x00]           Zero padding to 0x1000
-```
+0x0000  47 41 52 4d 49 4e 64 00   Magic: "GARMINd\0"
+0x0008  01 00 01 00 dc 02 00 15   Record marker + type 0xDC
+0x006E  01 00 01 00 4c 02 00 89   Record marker + type 0x4C
+0x1000  start of records
 
-## Known embedded content types
+## Confirmed record header (9 bytes)
 
-- gzip streams (magic: `1f 8b`) — many present
-- PNG images (magic: `89 50 4e 47`) — hundreds present
-- SQLite schemas
-- Bitstream fonts
-- SoundClear DSP firmware
-- VoCon 3200 speech engine
-- CRC32 tables (LE and BE)
-- SHA256 constants
+| Offset | Size | Name    | Meaning                                      |
+|--------|------|---------|----------------------------------------------|
+| +0     | 4    | Marker  | Constant 01 00 01 00                         |
+| +4     | 1    | Type    | Record type identifier                       |
+| +5     | 2    | FieldA  | Unknown — subtype or flags                   |
+| +7     | 2    | FieldB  | LE uint16 length for types 0x4C and 0x67;    |
+|        |      |         | UNKNOWN encoding for types 0xDC and 0x64     |
+| +9     | N    | Payload | N bytes of record payload                    |
 
-## Internal Garmin source paths (leaked in binary)
+## Confirmed record types
 
-```
-gpk\gps_st\garminos\os20\gps_st_os20_semaphore.c
-gpk\gps_st\garminos\os20\gps_st_os20_task.c
-```
+### 0xDC — header record 1
+Offset 0x0008 in both files.
+Evidence: 01 00 01 00 dc 02 00 15 00 00 00 00 00 00 00 00
+FieldA=0x0002, FieldB=0x0015
+Payload: 0x0011-0x006D (93 bytes, all zeros in remotesw)
+Length encoding: UNKNOWN
 
-Target architecture: ARM. OS: GarminOS (proprietary) based on OS20 RTOS (STMicro).
+### 0x4C — header record 2
+Offset 0x006E in both files.
+Evidence: 01 00 01 00 4c 02 00 89 0f 00 00 00 00 00 00 00
+FieldA=0x0002, FieldB=0x0F89=3977
+Formula CONFIRMED: next = offset + 9 + FieldB = 0x1000
+Payload: 0x0077-0x0FFF (3977 bytes, all zeros in remotesw)
 
-## Open questions (Phase 2)
+### 0x64 — main payload record
+Offset 0x1000 in both files.
+Evidence: 01 00 01 00 64 06 00 0a 00 0b 00 0a 00 0a 10 15
+FieldA=0x0006, FieldB=0x000A
+Payload: 0x1009-0x9062 (32858 bytes, ARM code/data)
+Length encoding: UNKNOWN — do not use FieldB as length
 
-- What do bytes 0x08–0x0F encode? (version fields?)
-- Is 0x35–0x36 really an offset pointer or a length?
-- What is the record structure starting at 0x1000?
-- Is there a Table of Contents, or are records inline with headers?
-- What algorithm protects the file? (CRC32? SHA256? none?)
+### 0x67 — EOF trailer record
+Evidence: 01 00 01 00 67 ff ff 00 00
+FieldA=0xFFFF, FieldB=0x0000
+Formula CONFIRMED: next = offset + 9 + 0 = EOF
+Payload size: 0 bytes
+
+## remotesw_090100.GCD record map
+
+| Offset   | Type | Payload start | Next     | Payload size   |
+|----------|------|---------------|----------|----------------|
+| 0x0008   | 0xDC | 0x0011        | 0x006E   | 93 (0x5D)      |
+| 0x006E   | 0x4C | 0x0077        | 0x1000   | 3977 (0xF89)   |
+| 0x1000   | 0x64 | 0x1009        | 0x9063   | 32858 (0x805A) |
+| 0x9063   | 0x67 | 0x906C        | EOF      | 0              |
+
+## Length handling
+
+Confirmed: types 0x4C and 0x67 → FieldB is LE uint16 payload length
+Unknown:   types 0xDC and 0x64 → FieldB does NOT encode payload length
+
+## Notes
+
+- Internal strings (GARMIN, RGN, LBL, NET, NOD, MDR, SRT) are payload
+  contents, not top-level container markers.
+- 0xFF padding near EOF is consistent with flash memory storage.
+- The file likely contains an embedded FAT filesystem image
+  (strings "OS5.0", "FAT32", "FAT16" found at 0x3C6E9).
+
+## Open questions for Phase 3
+
+- What encodes payload length for types 0xDC and 0x64?
+- Are other record types length-delimited or scan-delimited?
+- Is there a checksum or integrity field per record?
+- What is the full type registry for GUPDATE.GCD (80+ types found)?
