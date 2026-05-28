@@ -106,3 +106,32 @@ def extract(gcd_file: str, output: str, type_filter: str | None) -> None:
         f"Extracted {len(summary.resources)} resources "
         f"({summary.png_count} PNG, {summary.gzip_count} gzip-signature hits)."
     )
+
+
+@main.command()
+@click.argument("gcd_path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--type", "record_type", default="0x01", help="Record type to analyze")
+@click.option("--output", "-o", default="./analysis/", help="Output directory placeholder.")
+def analyze(gcd_path: str, record_type: str, output: str) -> None:
+    """Analyze specific record types for classification."""
+    from gcd_tool.analyzer import analyze_record_type
+
+    parsed_type = int(record_type, 0)
+    analyses = analyze_record_type(gcd_path, parsed_type)
+
+    table = Table(title=f"Analysis: {gcd_path} type 0x{parsed_type:02x}")
+    table.add_column("Record", style="cyan")
+    table.add_column("Class", style="magenta")
+    table.add_column("Confidence", justify="right")
+    table.add_column("Payload size", justify="right")
+    table.add_column("Details")
+    for item in analyses:
+        table.add_row(
+            hex(int(item["record_offset"])),
+            str(item["type"]),
+            f"{float(item['confidence']):.2f}",
+            str(int(item["payload_size"])),
+            str(item["details"]),
+        )
+    console.print(table)
+    console.print(f"Analysis output directory reserved: {output}")
