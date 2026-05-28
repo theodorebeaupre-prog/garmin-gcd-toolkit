@@ -24,6 +24,28 @@ gcd-tool list   path/to/GUPDATE.GCD
 gcd-tool extract path/to/GUPDATE.GCD --output ./output
 ```
 
+## AI Workflow
+
+This project was built using a multi-AI development workflow:
+
+| Tool | Role |
+|------|------|
+| **[Claude](https://claude.ai)** | Research partner — binary analysis, hypothesis formation, hex dump interpretation, legal review |
+| **[Claude Code](https://claude.ai/code)** | Project architect — bootstrap, safety guardrails, git workflow, pytest structure |
+| **[Codex CLI](https://openai.com)** | Phase 2-3 implementer — binary walker, record parser, resource extractor |
+| **[Mistral Vibe](https://mistral.ai)** | Phase 3-4 implementer — extractor.py, analyzer.py, CLI integration |
+
+### Methodology
+
+Every hypothesis was validated against actual hex bytes before
+any code was written. Each AI was explicitly instructed:
+
+> "Never guess field meanings. Show the hex bytes first.
+> Propose a hypothesis. Test it. Only then write code."
+
+This discipline was critical — without it, the models would
+have confidently hallucinated wrong binary structures.
+
 ## Legal Notice
 
 **This project is independent and is not affiliated with, endorsed by, or
