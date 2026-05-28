@@ -1,4 +1,4 @@
-from construct import Bytes, Const, Hex, Int8ub, Struct
+from construct import Bytes, Const, Hex, Int8ub, Struct  # type: ignore[import-untyped]
 
 GCD_MARKER = b"\x01\x00\x01\x00"
 GCD_MAGIC = b"GARMINd\x00"

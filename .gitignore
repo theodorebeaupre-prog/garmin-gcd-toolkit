@@ -14,7 +14,9 @@ GarminDevice.xml
 
 # Extracted resources (derived from proprietary firmware)
 output/
+output_*/
 extracted/
+*.txt
 
 # Samples directory (firmware files live here)
 samples/

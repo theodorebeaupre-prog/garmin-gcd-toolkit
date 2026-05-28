@@ -86,6 +86,10 @@ Unknown:   types 0xDC and 0x64 → FieldB does NOT encode payload length
   remains TBD.
 - `BM` hits were false positives caused by ARM Thumb opcodes and nearby data.
   No valid standalone BMP files were confirmed.
+- Current extractor exports:
+  - valid PNG files to `output/png/`
+  - `1f 8b` signature hits to `output/gzip/` as raw candidates
+  - optional record-type filtering via CLI `gcd-tool extract --type`
 
 ## Additional record observations
 
@@ -104,4 +108,6 @@ Unknown:   types 0xDC and 0x64 → FieldB does NOT encode payload length
 - Are other record types length-delimited or scan-delimited?
 - Are the 6 `1f 8b` hits real compressed streams with a Garmin-specific wrapper
   or false positives similar to the BMP hits?
+- Is the large type `0x01` blob code, compressed data, or a secondary
+  container?
 - What is the full type registry for GUPDATE.GCD (80+ types found)?

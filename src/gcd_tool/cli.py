@@ -1,5 +1,7 @@
 """CLI entry point for gcd-tool."""
 
+from pathlib import Path
+
 import click
 from rich.console import Console
 from rich.table import Table
@@ -7,6 +9,16 @@ from rich.table import Table
 console = Console()
 
 GCD_MAGIC = b"GARMINd\x00"
+
+
+def _parse_type_filter(type_value: str | None) -> set[int] | None:
+    if type_value is None:
+        return None
+    values = [part.strip() for part in type_value.split(",") if part.strip()]
+    parsed: set[int] = set()
+    for value in values:
+        parsed.add(int(value, 0))
+    return parsed
 
 
 @click.group()
@@ -58,6 +70,39 @@ def list_sections(gcd_file: str, limit: int) -> None:
 @click.argument("gcd_file", type=click.Path(exists=True, dir_okay=False))
 @click.option("--output", "-o", default="./output", show_default=True,
               help="Output directory for extracted resources.")
-def extract(gcd_file: str, output: str) -> None:
+@click.option(
+    "--type",
+    "type_filter",
+    default=None,
+    help="Comma-separated record type filter, e.g. 0x64,0x03",
+)
+def extract(gcd_file: str, output: str, type_filter: str | None) -> None:
     """Extract embedded resources (PNG, gzip, etc.) from a GCD file."""
-    console.print("[yellow]Extraction not yet implemented — coming in Phase 4.[/yellow]")
+    from gcd_tool.extractor import extract_resources
+
+    summary = extract_resources(
+        gcd_file,
+        Path(output),
+        type_filter=_parse_type_filter(type_filter),
+    )
+    table = Table(title=f"Extracted resources: {gcd_file}")
+    table.add_column("Kind", style="magenta")
+    table.add_column("Record", style="cyan")
+    table.add_column("Offset", style="cyan")
+    table.add_column("Size", justify="right")
+    table.add_column("MIME")
+    table.add_column("Path")
+    for resource in summary.resources:
+        table.add_row(
+            resource.kind,
+            f"0x{resource.record_type:02x}@0x{resource.record_offset:x}",
+            hex(resource.absolute_offset),
+            str(resource.size),
+            resource.detected_mime,
+            str(resource.path),
+        )
+    console.print(table)
+    console.print(
+        f"Extracted {len(summary.resources)} resources "
+        f"({summary.png_count} PNG, {summary.gzip_count} gzip-signature hits)."
+    )
