@@ -1,69 +1,67 @@
 # garmin-gcd-toolkit
 
-Open-source Python toolkit for parsing and extracting resources from Garmin
-`.GCD` firmware container files. Developed through empirical reverse engineering
-for interoperability purposes.
+**Parse, inspect, and extract resources from Garmin `.GCD` firmware container files — with the format documented in the open.**
 
-## Status
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+![Status](https://img.shields.io/badge/status-active_reverse_engineering-orange)
 
-Phase 2 complete: record structure confirmed and walker implemented.
+Garmin ships firmware updates as `.GCD` container files. The format is undocumented. This project reverse-engineers it empirically — every claim validated against real hex bytes — and ships both:
 
-## Features
+- 📖 **[docs/FORMAT.md](docs/FORMAT.md)** — the `.GCD` format specification as we currently understand it: header layout, record structure, confirmed record types, and what's still unknown. Original work from byte-level observation; useful even if you never run the code.
+- 🛠 **`gcd-tool`** — a Python CLI to inspect headers, walk records, extract embedded resources (PNG, gzip…), and analyze payloads (entropy, ARM Thumb detection, container classification).
 
-- GCD magic validation
-- Record walking via `gcd-tool list`
-- 19 records mapped in `GUPDATE.GCD`
-- 8 tests passing
-
-## Usage
+## Quick start
 
 ```bash
+git clone https://github.com/theodorebeaupre-prog/garmin-gcd-toolkit
+cd garmin-gcd-toolkit
 pip install -e .
-gcd-tool inspect path/to/GUPDATE.GCD
-gcd-tool list   path/to/GUPDATE.GCD
-gcd-tool extract path/to/GUPDATE.GCD --output ./output
+
+gcd-tool inspect  GUPDATE.GCD                    # validate magic, show header
+gcd-tool list     GUPDATE.GCD                    # walk and list all records
+gcd-tool extract  GUPDATE.GCD --output ./out     # extract embedded resources
+gcd-tool analyze  GUPDATE.GCD                    # entropy + payload classification
 ```
 
-## AI Workflow
+You supply your own legally obtained `.GCD` file (e.g. downloaded through Garmin Express for a device you own). **No firmware is distributed with this repository.**
 
-This project was built using a multi-AI development workflow:
+## What works today
 
-| Tool | Role |
-|------|------|
-| **[Claude](https://claude.ai)** | Research partner — binary analysis, hypothesis formation, hex dump interpretation, legal review |
-| **[Claude Code](https://claude.ai/code)** | Project architect — bootstrap, safety guardrails, git workflow, pytest structure |
-| **[Codex CLI](https://openai.com)** | Phase 2-3 implementer — binary walker, record parser, resource extractor |
-| **[Mistral Vibe](https://mistral.ai)** | Phase 3-4 implementer — extractor.py, analyzer.py, CLI integration |
+| Capability | Status |
+|---|---|
+| GCD magic + 4 KB header validation | ✅ Confirmed |
+| Record walker (9-byte record headers, marker `01 00 01 00`) | ✅ Confirmed |
+| Record types `0xDC`, `0x4C`, `0x64`, `0x67` mapped | ✅ Confirmed |
+| Resource extraction (PNG with IEND validation, gzip) | ✅ Working |
+| Payload analyzer — entropy, ARM Thumb heuristics | ✅ Working |
+| Length encoding for types `0xDC`/`0x64` | 🔬 Under investigation |
 
-### Methodology
+Test suite: `pytest` (header parsing, record walking, extraction, analyzer).
 
-Every hypothesis was validated against actual hex bytes before
-any code was written. Each AI was explicitly instructed:
+## How it was reverse-engineered
+
+Every hypothesis was validated against actual hex bytes before any code was written, under one strict rule:
 
 > "Never guess field meanings. Show the hex bytes first.
 > Propose a hypothesis. Test it. Only then write code."
 
-This discipline was critical — without it, the models would
-have confidently hallucinated wrong binary structures.
+The work was done with a multi-AI workflow — [Claude](https://claude.ai) for binary analysis and hypothesis formation, [Claude Code](https://claude.ai/code) for project architecture and guardrails, [Codex CLI](https://openai.com) and [Mistral Vibe](https://mistral.ai) as phase implementers. The discipline above was what kept the models from confidently hallucinating wrong binary structures — the findings in [FORMAT.md](docs/FORMAT.md) cite the evidence bytes for each claim.
 
-## Legal Notice
+## Contributing
 
-**This project is independent and is not affiliated with, endorsed by, or
-connected to Garmin Ltd. or any of its subsidiaries.**
+The most valuable contributions are **new observations**:
 
-The `.GCD` format documentation contained in this repository (`docs/FORMAT.md`)
-is original work produced through empirical observation of binary data. No
-Garmin source code, internal specifications, or confidential materials were
-used or accessed.
+- Run `gcd-tool list` / `analyze` on `.GCD` files from other devices and report record types we haven't mapped.
+- Help crack the length encoding for record types `0xDC` and `0x64`.
+- Add extractors for more embedded formats.
 
-Reverse engineering for the purpose of achieving interoperability with
-independently created software is permitted under:
-- **Canadian Copyright Act, §30.61** (interoperability exception)
-- **EU Directive 2009/24/EC, Article 6** (decompilation for interoperability)
-- **17 U.S.C. §107** (fair use) and *Sega v. Accolade* precedent
+Open an issue with the hex evidence (never attach firmware files) and let's compare notes.
 
-**No firmware files are distributed with this repository.** You must supply
-your own legally obtained `.GCD` file. The `samples/` directory is gitignored.
+## Legal notice
 
-Software is provided "AS IS" without warranty of any kind. Use at your own
-risk. Modifying device firmware may void your warranty or damage your device.
+**This project is independent and is not affiliated with, endorsed by, or connected to Garmin Ltd. or any of its subsidiaries.**
+
+The format documentation in this repository is original work produced through empirical observation of binary data. No Garmin source code, internal specifications, or confidential materials were used or accessed. Reverse engineering for interoperability is permitted under the **Canadian Copyright Act §30.61**, **EU Directive 2009/24/EC Art. 6**, and **17 U.S.C. §107** (*Sega v. Accolade*).
+
+No firmware files are distributed here; the `samples/` directory is gitignored. Software is provided "AS IS" without warranty. Modifying device firmware may void your warranty or damage your device.
